@@ -56,7 +56,13 @@ class GamesController < ApplicationController
     end
 
     def incomplete
-        @games=Game.where(state: 'waitingplayer')
+        @games=[]
+        @gamesincompletes=Game.where(state: 'waitingplayer')
+        @gamesincompletes.each do |g|
+            if g.users.length==1
+                @games.push({id:g.id,player:g.users[0].name})
+            end
+        end
         if @games.length>=1
             render status:200, json:{games: @games}
         else
