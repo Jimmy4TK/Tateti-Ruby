@@ -45,7 +45,7 @@ class UsersController < ApplicationController
     def login
         @user=User.find_by(email: params[:email])
         if @user.blank?
-            render status:404, json:{error: "User #{params[:email]} does not exist"}
+            render status:404, json:{error: "User #{params[:email]} doesn't exist"}
         else
             if @user.authenticate("#{params[:password]}")
                 render status:200,json:{token: @user.token}
@@ -70,7 +70,7 @@ class UsersController < ApplicationController
     def password
         @user=User.find_by(token: params[:token])
         if @user.blank?
-            render status:404, json:{error: "User does not exist"}
+            render status:404, json:{error: "User doesn't exist"}
         else
             if @user.authenticate(params[:currentPassword])
                 if params[:newPassword]==params[:newPassword2]
@@ -98,7 +98,7 @@ class UsersController < ApplicationController
     def set_user
         @user=User.find_by(id: params[:id])
         if @user.blank?
-            render status:404, json:{error: "User #{params[:id]} does not exist"}
+            render status:404, json:{error: "User #{params[:id]} doesn't exist"}
             false
         end
     end

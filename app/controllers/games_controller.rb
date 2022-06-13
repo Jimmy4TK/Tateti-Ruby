@@ -1,6 +1,6 @@
 class GamesController < ApplicationController
 
-    before_action :set_game, only:[:show,:update,:destroy,:assign_player] 
+    before_action :set_game, only:[:show,:update,:destroy,:assign_player,:check_player] 
     before_action :set_player, only:[:assign_player]
 
     def index
@@ -9,14 +9,19 @@ class GamesController < ApplicationController
     end
     
     def show
-        render status:200, json:{game: @game, players: @game.users}
+        if(@game.users.second==nil)
+            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name}
+        else
+            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
+        end
     end
 
     def create
         @game=Game.new
         if set_player
+            @game.user_ids+=[@user.id]
             if @game.save
-                render status:200, json:{game: @game}
+                render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@user.name}
             else
                 render_errors_response(@game)
             end
@@ -24,7 +29,7 @@ class GamesController < ApplicationController
     end
 
     def update
-        @game=Game.assign_attributes(game_params)
+        @game.assign_attributes(game_params)
         finish?
         if @game.save
             render status:200, json:{game: @game}
@@ -41,15 +46,31 @@ class GamesController < ApplicationController
         end
     end
 
+    def check_player
+        if(@game.users.second==nil)
+            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name}
+        else
+            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
+        end
+    end
+
     def assign_player
         if @game.user_ids.length==1
             @game.user_ids+=[@user.id]
             @game.state=1
             @game.users.first.state=3
-            @game.users.first.save
             @game.users.second.state=3
-            @game.users.second.save
-            render status:200, json:{game: @game}
+            if @game.users.first.save && @game.users.second.save && @game.save
+                render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
+            else
+                @game.state=0
+                @game.users.first.state=2
+                @game.users.second.state=2
+                @game.users.first.save
+                @game.users.second.save
+                @game.save
+                render status:400, json:{error: "Something's wrong"}
+            end
         else
             render status:400, json:{error: "Game #{@game.id} already has 2 players"}
         end
@@ -60,7 +81,7 @@ class GamesController < ApplicationController
         @gamesincompletes=Game.where(state: 'waitingplayer')
         @gamesincompletes.each do |g|
             if g.users.length==1
-                @games.push({id:g.id,player:g.users[0].name})
+                @games.push({id:g.id,player1:g.users[0].name})
             end
         end
         if @games.length>=1
@@ -79,7 +100,7 @@ class GamesController < ApplicationController
     def set_game
         @game=Game.find_by(id: params[:id])
         if @game.blank?
-            render status:404, json:{error: "Game #{params[:id]} does not exist"}
+            render status:404, json:{error: "Game #{params[:id]} doesn't exist"}
             false
         end
     end
@@ -87,17 +108,16 @@ class GamesController < ApplicationController
     def set_player
         @user=User.find_by(token: params[:token])
         if @user.blank?
-            render status:404, json:{error: "User does not exist"}
+            render status:404, json:{error: "User doesn't exist"}
             false
         else
-            @game.user_ids+=[@user.id]
-            @user.state=2
-            if !@user.save
-                render_errors_response(@user)
-                false
-            else
-                true
+            if @user.game_id!=nil
+                @destroy=Game.find_by(id: @user.game_id)
+                if @destroy!=nil && @destroy.users.length==1
+                    @destroy.destroy
+                end
             end
+            true
         end
     end
 
