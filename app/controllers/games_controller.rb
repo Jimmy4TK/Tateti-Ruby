@@ -1,6 +1,6 @@
 class GamesController < ApplicationController
 
-    before_action :set_game, only:[:update,:destroy,:assign_player,:check_player] 
+    before_action :set_game, only:[:game,:destroy,:assign_player,:check_player] 
     before_action :set_player, only:[:assign_player]
 
     def create
@@ -15,15 +15,15 @@ class GamesController < ApplicationController
         end
     end
 
-    def update
+    def game    
         @pos=@game.pos.split(',')
         if @game.team==true
-            @pos[params[:position]]='1'
+            @pos[params[:pos]]='1'
             @value='1'
             finish
             @game.team=false
         else
-            @pos[params[:position]]='2'
+            @pos[params[:pos]]='2'
             @value='2'
             finish
             @game.team=true
