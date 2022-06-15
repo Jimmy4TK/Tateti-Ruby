@@ -3,14 +3,6 @@ class UsersController < ApplicationController
     before_action :set_user, only: [:show,:update,:destroy]
     before_action :check_token, only:[:update,:destroy]
 
-    def index
-        @users=User.all.select("id,name,email,state,created_at,updated_at")
-    end
-
-    def show
-        render status:200, json:{id: @user.id,name: @user.name,email:@user.email,state: @user.state,created_at: @user.created_at,updated_at: @user.updated_at}
-    end
-
     def create
         if params[:password]==params[:password2]
             @user=User.new(params.require(:user).permit(:name,:email,:password))
@@ -47,15 +39,13 @@ class UsersController < ApplicationController
         if @user.blank?
             render status:404, json:{error: "User #{params[:email]} doesn't exist"}
         else
+
             if @user.authenticate("#{params[:password]}")
                 render status:200,json:{token: @user.token}
             else
                 render status:400,json:{error: "Password is incorrect"}
             end
         end
-    end
-
-    def signout
     end
 
     def current

@@ -1,20 +1,7 @@
 class GamesController < ApplicationController
 
-    before_action :set_game, only:[:show,:update,:destroy,:assign_player,:check_player] 
+    before_action :set_game, only:[:update,:destroy,:assign_player,:check_player] 
     before_action :set_player, only:[:assign_player]
-
-    def index
-        @games=Game.all
-        render status:200, json:{games:@games}
-    end
-    
-    def show
-        if(@game.users.second==nil)
-            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name}
-        else
-            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
-        end
-    end
 
     def create
         @game=Game.new
@@ -29,10 +16,21 @@ class GamesController < ApplicationController
     end
 
     def update
-        @game.assign_attributes(game_params)
-        finish?
+        @pos=@game.pos.split(',')
+        if @game.team==true
+            @pos[params[:position]]='1'
+            @value='1'
+            finish
+            @game.team=false
+        else
+            @pos[params[:position]]='2'
+            @value='2'
+            finish
+            @game.team=true
+        end
+        @game.pos=@pos.join(',')
         if @game.save
-            render status:200, json:{game: @game}
+            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
         else
             render_errors_response(@game)
         end
@@ -93,10 +91,6 @@ class GamesController < ApplicationController
 
     private
 
-    def game_params
-        params.require(:game).permit("pos")
-    end
-
     def set_game
         @game=Game.find_by(id: params[:id])
         if @game.blank?
@@ -121,34 +115,28 @@ class GamesController < ApplicationController
         end
     end
 
-    def game
-        
-    end
-
-    def finish?
-        @pos=@game.pos.split(',')
-        if ((@pos[0]==value && @pos[1]==value && @pos[2]==value) || 
-            (@pos[3]==value && @pos[4]==value && @pos[5]==value) || 
-            (@pos[6]==value && @pos[7]==value && @pos[8]==value) || 
-            (@pos[0]==value && @pos[3]==value && @pos[6]==value) || 
-            (@pos[1]==value && @pos[4]==value && @pos[7]==value) || 
-            (@pos[2]==value && @pos[5]==value && @pos[8]==value) || 
-            (@pos[0]==value && @pos[4]==value && @pos[8]==value) || 
-            (@pos[2]==value && @pos[4]==value && @pos[6]==value))
+    def finish
+        if ((@pos[0]==@value && @pos[1]==@value && @pos[2]==@value) || 
+            (@pos[3]==@value && @pos[4]==@value && @pos[5]==@value) || 
+            (@pos[6]==@value && @pos[7]==@value && @pos[8]==@value) || 
+            (@pos[0]==@value && @pos[3]==@value && @pos[6]==@value) || 
+            (@pos[1]==@value && @pos[4]==@value && @pos[7]==@value) || 
+            (@pos[2]==@value && @pos[5]==@value && @pos[8]==@value) || 
+            (@pos[0]==@value && @pos[4]==@value && @pos[8]==@value) || 
+            (@pos[2]==@value && @pos[4]==@value && @pos[6]==@value))
             if @game.team
                 @game.state=2
-                false
             else
                 @game.state=3
-                false
             end
         else
-            @game.w.each do |w|
-                if w==0
-                    i=+1
+            @i=0
+            @pos.each do |w|
+                if w=='0'
+                    @i+=1
                 end
             end
-            if i==0
+            if @i==0
                 @game.state=4
                 false
             end

@@ -10,7 +10,7 @@ Rails.application.routes.draw do
   get '/games/incomplete', to: 'games#incomplete'
   post '/games/assignplayer/:id', to: 'games#assign_player'
   get '/games/checkplayer/:id', to:'games#check_player'
-  resources :users, except:[:new,:edit]
-  resources :games, except:[:new,:edit]
+  resources :users, except:[:new,:edit,:show,:index]
+  resources :games, except:[:new,:edit,:show,:index]
 
 end
