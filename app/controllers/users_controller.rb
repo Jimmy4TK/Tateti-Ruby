@@ -1,7 +1,7 @@
 class UsersController < ApplicationController
 
-    before_action :set_user, only: [:show,:update,:destroy]
-    before_action :check_token, only:[:update,:destroy]
+    before_action :set_user, only: [:password]
+    before_action :check_token, only:[:password]
 
     def create
         if params[:password]==params[:password2]
@@ -16,30 +16,11 @@ class UsersController < ApplicationController
         end
     end
 
-
-    def update
-        @user.assign_attributes(user_params)
-        if @user.save
-            render status:200, json:{user: @user}
-        else
-            render_errors_response(@user)
-        end
-    end
-
-    def destroy
-        if @user.destroy
-            render status:200, json:{}
-        else
-            render_errors_response(@user)
-        end
-    end
-
     def login
         @user=User.find_by(email: params[:email])
         if @user.blank?
             render status:404, json:{error: "User #{params[:email]} doesn't exist"}
         else
-
             if @user.authenticate("#{params[:password]}")
                 render status:200,json:{token: @user.token}
             else
@@ -53,12 +34,11 @@ class UsersController < ApplicationController
         if @user.blank?
             render status:401, json:{error: "User doesn't exist"}
         else
-            render status:200, json:{id: @user.id,name:@user.name,email:@user.email,state:@user.state}
+            render status:200, json:{id: @user.id,name:@user.name,email:@user.email}
         end
     end
 
     def password
-        @user=User.find_by(token: params[:token])
         if @user.blank?
             render status:404, json:{error: "User doesn't exist"}
         else
@@ -79,6 +59,10 @@ class UsersController < ApplicationController
         end
     end
 
+    def signout
+        
+    end
+
     private
 
     def user_params
@@ -96,6 +80,7 @@ class UsersController < ApplicationController
     def check_token
         if request.headers["Authorization"] != "Bearer #{@user.token}"
             render status:400, json:{error: "Token isn't valid"}
+            false
         end
     end
 

@@ -52,7 +52,7 @@ Rails db:seed
 
 ### The method needs params: user token. Method returns game created with its creator
 
-## Update
+## Game
 
 ### The method needs params: position(modified position number) and game id. Method verify if game is finish (win team red, green or draw) and return occupied positions and the team whose turn it is 
 

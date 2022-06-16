@@ -1,72 +1,59 @@
 class GamesController < ApplicationController
 
-    before_action :set_game, only:[:game,:destroy,:assign_player,:check_player] 
+    before_action :set_game, only:[:move,:assign_player,:check_player] 
     before_action :set_player, only:[:assign_player]
+    before_action :check_token, only:[:move]
 
     def create
         @game=Game.new
         if set_player
-            @game.user_ids+=[@user.id]
+            @game.player1=@user
             if @game.save
-                render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@user.name}
+                render status:200, json:{id: @game.id,board1: @game.board1,board2: @game.board2,turn: @game.turn,state: @game.state,player1:@game.player1.name}
             else
                 render_errors_response(@game)
             end
         end
     end
 
-    def game    
-        @pos=@game.pos.split(',')
-        if @game.team==true
-            @pos[params[:pos]]='1'
-            @value='1'
-            finish
-            @game.team=false
+    def move
+        if @game.turn==true
+            @game.board1+="#{params[:pos]}"
+            if @game.board1.length>=3 && @game.check_win(@game.board1)
+                @game.state=2
+            end
         else
-            @pos[params[:pos]]='2'
-            @value='2'
-            finish
-            @game.team=true
+            @game.board2+="#{params[:pos]}"
+            if @game.board1.length>=3 && @game.check_win(@game.board2)
+                @game.state=3
+            end
         end
-        @game.pos=@pos.join(',')
+        if @game.state=="ingame" && @game.board1.length+@game.board2.length==9
+            @game.state=4
+        end
+        @game.toggle!(:turn)
         if @game.save
-            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
-        else
-            render_errors_response(@game)
-        end
-    end
-
-    def destroy
-        if @game.destroy
-            render status:200
+            render status:200, json:{id: @game.id,board1: @game.board1,board2: @game.board2,turn: @game.turn,state: @game.state,player1:@game.player1_id,player2:@game.player2_id}
         else
             render_errors_response(@game)
         end
     end
 
     def check_player
-        if(@game.users.second==nil)
-            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name}
+        if(@game.player2==nil)
+            render status:200, json:{id: @game.id,board1: @game.board1,turn: @game.turn,state: @game.state,player1:@game.player1.name}
         else
-            render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
+            render status:200, json:{id: @game.id,board1: @game.board1,board2: @game.board2,turn: @game.turn,state: @game.state,player1:@game.player1.name,player2:@game.player2.name}
         end
     end
 
     def assign_player
-        if @game.user_ids.length==1
-            @game.user_ids+=[@user.id]
+        if(@game.player2==nil)
+            @game.player2=@user
             @game.state=1
-            @game.users.first.state=3
-            @game.users.second.state=3
-            if @game.users.first.save && @game.users.second.save && @game.save
-                render status:200, json:{id: @game.id,pos: @game.pos,team: @game.team,state: @game.state,player1:@game.users.first.name,player2:@game.users.second.name}
+            if @game.save
+                render status:200, json:{id: @game.id,board1: @game.board1,board2: @game.board2,turn: @game.turn,state: @game.state,player1:@game.player1.name,player2:@game.player2.name}
             else
-                @game.state=0
-                @game.users.first.state=2
-                @game.users.second.state=2
-                @game.users.first.save
-                @game.users.second.save
-                @game.save
                 render status:400, json:{error: "Something's wrong"}
             end
         else
@@ -75,15 +62,13 @@ class GamesController < ApplicationController
     end
 
     def incomplete
-        @games=[]
-        @gamesincompletes=Game.where(state: 'waitingplayer')
-        @gamesincompletes.each do |g|
-            if g.users.length==1
-                @games.push({id:g.id,player1:g.users[0].name})
-            end
-        end
+        @games=Game.where(state: 'waitingplayer')
         if @games.length>=1
-            render status:200, json:{games: @games}
+            gamesincomplete=[]
+            @games.each do |g|
+                gamesincomplete.push({id:g.id,player1:g.player1.name})
+            end
+            render status:200, json:{games: gamesincomplete }
         else
             render status:400, json:{error: "Games with 1 player not found"}
         end
@@ -105,39 +90,19 @@ class GamesController < ApplicationController
             render status:404, json:{error: "User doesn't exist"}
             false
         else
-            if @user.game_id!=nil
-                @destroy=Game.find_by(id: @user.game_id)
-                if @destroy!=nil && @destroy.users.length==1
-                    @destroy.destroy
-                end
-            end
             true
         end
     end
 
-    def finish
-        if ((@pos[0]==@value && @pos[1]==@value && @pos[2]==@value) || 
-            (@pos[3]==@value && @pos[4]==@value && @pos[5]==@value) || 
-            (@pos[6]==@value && @pos[7]==@value && @pos[8]==@value) || 
-            (@pos[0]==@value && @pos[3]==@value && @pos[6]==@value) || 
-            (@pos[1]==@value && @pos[4]==@value && @pos[7]==@value) || 
-            (@pos[2]==@value && @pos[5]==@value && @pos[8]==@value) || 
-            (@pos[0]==@value && @pos[4]==@value && @pos[8]==@value) || 
-            (@pos[2]==@value && @pos[4]==@value && @pos[6]==@value))
-            if @game.team
-                @game.state=2
-            else
-                @game.state=3
+    def check_token
+        if @game.turn==true
+            if request.headers["Authorization"] != "Bearer #{@game.player1.token}"
+                render status:400, json:{error: "User Token isn't valid"}
+                false
             end
         else
-            @i=0
-            @pos.each do |w|
-                if w=='0'
-                    @i+=1
-                end
-            end
-            if @i==0
-                @game.state=4
+            if request.headers["Authorization"] != "Bearer #{@game.player2.token}"
+                render status:400, json:{error: "User Token isn't valid"}
                 false
             end
         end

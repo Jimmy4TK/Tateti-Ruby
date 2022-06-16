@@ -12,20 +12,24 @@
 
 ActiveRecord::Schema[7.0].define(version: 2022_05_19_104854) do
   create_table "games", charset: "utf8mb3", force: :cascade do |t|
-    t.string "pos", default: "0,0,0,0,0,0,0,0,0"
-    t.boolean "team", default: true
+    t.string "board", default: "0,0,0,0,0,0,0,0,0"
+    t.string "board1", default: ""
+    t.string "board2", default: ""
+    t.boolean "turn", default: true
     t.integer "state", default: 0
+    t.bigint "player1_id"
+    t.bigint "player2_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["player1_id"], name: "index_games_on_player1_id"
+    t.index ["player2_id"], name: "index_games_on_player2_id"
   end
 
   create_table "users", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "game_id"
     t.string "name"
     t.string "email"
     t.string "password_digest"
     t.string "token"
-    t.integer "state", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
